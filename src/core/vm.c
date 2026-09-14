@@ -11,6 +11,37 @@
 #include <shmem.h>
 #include <objpool.h>
 #include <list.h>
+#include <percpu.h>
+
+struct vcpu_pool {
+    /* next free slot, only ever advanced by the owning cpu */
+    size_t count;
+    struct vcpu vcpus[CONFIG_VCPU_PER_CPU_NUM];
+};
+
+static DEFINE_PERCPU(struct vcpu_pool, vcpu_pool);
+
+struct vcpu* vcpu_alloc(void)
+{
+    /* Use the address valid on every cpu, so the returned pointer can be shared */
+    struct vcpu_pool* pool = percpu_get(vcpu_pool, cpu()->id);
+
+    if (pool->count >= CONFIG_VCPU_PER_CPU_NUM) {
+        ERROR("no free vcpu on cpu %d\n", cpu()->id);
+    }
+
+    return &pool->vcpus[pool->count++];
+}
+
+struct vcpu* vcpu_get(cpuid_t cpuid, size_t index)
+{
+    struct vcpu_pool* pool = percpu_get(vcpu_pool, cpuid);
+
+    if (index < pool->count) {
+        return &pool->vcpus[index];
+    }
+    return NULL;
+}
 
 static void vm_master_init(struct vm* vm, const struct vm_config* vm_config, vmid_t vm_id)
 {
@@ -46,7 +77,9 @@ static vcpuid_t vm_calc_vcpu_id(struct vm* vm)
 static void vm_vcpu_init(struct vm* vm, const struct vm_config* vm_config)
 {
     vcpuid_t vcpu_id = vm_calc_vcpu_id(vm);
-    struct vcpu* vcpu = vm_get_vcpu(vm, vcpu_id);
+    struct vcpu* vcpu = vcpu_alloc();
+
+    vm->vcpus[vcpu_id] = vcpu;
 
     vcpu->id = vcpu_id;
     vcpu->phys_id = cpu()->id;
@@ -288,18 +321,9 @@ static void vm_init_remio(struct vm* vm, const struct vm_config* vm_config)
     remio_assign_vm_cpus(vm);
 }
 
-static struct vm* vm_allocation_init(struct vm_allocation* vm_alloc)
-{
-    struct vm* vm = vm_alloc->vm;
-    vm->vcpus = vm_alloc->vcpus;
-    return vm;
-}
-
-struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init_sync,
+struct vm* vm_init(struct vm* vm, struct cpu_synctoken* vm_init_sync,
     const struct vm_config* vm_config, bool master, vmid_t vm_id)
 {
-    struct vm* vm = vm_allocation_init(vm_alloc);
-
     /**
      * Before anything else, initialize vm structure.
      */
@@ -328,6 +352,11 @@ struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init
     }
 
     cpu_sync_barrier(&vm->sync);
+
+    /**
+     * Make the vm's memory management state and the other cores' vcpus reachable from this core.
+     */
+    vm_mem_prot_cpu_init(vm);
 
     /**
      * Perform architecture dependent initializations. This includes, for example, setting the page

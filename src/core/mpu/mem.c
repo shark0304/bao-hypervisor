@@ -13,12 +13,6 @@
 #include <config.h>
 #include <percpu.h>
 
-#define MEM_BROADCAST      (true)
-#define MEM_DONT_BROADCAST (false)
-
-#define MEM_LOCKED         (true)
-#define MEM_NOT_LOCKED     (false)
-
 struct shared_region {
     enum AS_TYPE as_type;
     asid_t asid;
@@ -292,7 +286,7 @@ static cpumap_t mem_section_shared_cpus(struct addr_space* as, as_sec_t section)
             /**
              * If we don't have a valid vcpu at this point, it means we are creating this region
              * before even having a vm. Therefore, the sharing of the region must be guaranteed by
-             * other means (e.g. vmm_vm_install)
+             * other means (e.g. vm_mem_prot_cpu_init)
              */
             if (cpu()->vcpu != NULL) {
                 cpus = cpu()->vcpu->vm->cpus;

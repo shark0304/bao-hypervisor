@@ -21,6 +21,16 @@ static size_t remio_dev_num(void)
     return dev_num;
 }
 
+/**
+ * Number of vcpu structures each physical cpu holds in its private block. Without vcpu scheduling
+ * a physical cpu runs at most one vcpu; once the configuration can pin several vcpus to a cpu this
+ * becomes the maximum over all cpus.
+ */
+static size_t vcpu_per_cpu_num(void)
+{
+    return 1;
+}
+
 int main() {
     size_t vcpu_num = 0;
     for (size_t i = 0; i < config.vmlist_size; i++) {
@@ -29,6 +39,7 @@ int main() {
 
     printf("#define CONFIG_VM_NUM %ld\n", config.vmlist_size);
     printf("#define CONFIG_VCPU_NUM %ld\n", vcpu_num);
+    printf("#define CONFIG_VCPU_PER_CPU_NUM %luU\n", vcpu_per_cpu_num());
 
     if(config.hyp.relocate) {
         printf("#define CONFIG_HYP_BASE_ADDR (0x%lx)\n", config.hyp.base_addr);

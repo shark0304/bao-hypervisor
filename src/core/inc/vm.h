@@ -18,6 +18,7 @@
 #include <io.h>
 #include <ipc.h>
 #include <remio.h>
+#include <platform_defs.h>
 
 struct vm_mem_region {
     paddr_t base;
@@ -74,7 +75,12 @@ struct vm {
     struct cpu_synctoken sync;
     cpuid_t master;
 
-    struct vcpu* vcpus;
+    /**
+     * The vm's vcpus, indexed by vcpu id. Each vcpu lives in the private block of the physical
+     * cpu running it, the pointer is the one valid on every cpu (see vcpu_alloc()). One vcpu per
+     * physical cpu for now.
+     */
+    struct vcpu* vcpus[PLAT_CPU_NUM];
     size_t cpu_num;
     cpumap_t cpus;
 
@@ -109,14 +115,7 @@ struct vcpu {
     struct vm* vm;
 };
 
-struct vm_allocation {
-    vaddr_t base;
-    size_t size;
-    struct vm* vm;
-    struct vcpu* vcpus;
-};
-
-struct vm* vm_init(struct vm_allocation* vm_alloc, struct cpu_synctoken* vm_init_sync,
+struct vm* vm_init(struct vm* vm, struct cpu_synctoken* vm_init_sync,
     const struct vm_config* config, bool master, vmid_t vm_id);
 void vm_start(struct vm* vm, vaddr_t entry);
 void vm_emul_add_mem(struct vm* vm, struct emul_mem* emu);
@@ -131,10 +130,18 @@ cpumap_t vm_translate_to_vcpu_mask(struct vm* vm, cpumap_t mask, size_t len);
 static inline struct vcpu* vm_get_vcpu(struct vm* vm, vcpuid_t vcpuid)
 {
     if (vcpuid < vm->cpu_num) {
-        return &vm->vcpus[vcpuid];
+        return vm->vcpus[vcpuid];
     }
     return NULL;
 }
+
+/**
+ * vcpu storage: each physical cpu holds a pool of vcpu structures in its private block.
+ * vcpu_alloc() hands out the next free one of the calling cpu (initialization only, no
+ * reclaiming), vcpu_get() retrieves one already allocated by any cpu.
+ */
+struct vcpu* vcpu_alloc(void);
+struct vcpu* vcpu_get(cpuid_t cpuid, size_t index);
 
 static inline cpuid_t vm_translate_to_pcpuid(struct vm* vm, vcpuid_t vcpuid)
 {
@@ -174,6 +181,8 @@ static inline void vcpu_inject_irq(struct vcpu* vcpu, irqid_t id)
 /* ------------------------------------------------------------*/
 
 void vm_mem_prot_init(struct vm* vm, const struct vm_config* config);
+/* Called by every cpu of the vm after vm_mem_prot_init, before any cross-cpu vcpu access */
+void vm_mem_prot_cpu_init(struct vm* vm);
 
 /* ------------------------------------------------------------*/
 
