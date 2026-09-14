@@ -107,12 +107,22 @@ _reset_handler:
     st.w r20, 0 [r21]
 
 _clear_cpu:
-    /* clear CPUn private block (struct cpu + per-cpu objects) */
-    LOAD_ADDR _percpu_start, r20
+    /* locate and clear CPUn private block (struct cpu + per-cpu objects) */
     LOAD_ADDR _percpu_size, r12
+    /* cpu-affine region declared by the platform (0 if none) */
+    LOAD_ADDR cpu_private_base_tbl, r20
+    mov r10, r21
+    shl 2, r21          /* table index * sizeof(paddr_t) */
+    add r21, r20
+    ld.w 0[r20], r20
+    cmp r0, r20
+    bne _cpu_block_found
+    /* fallback: blocks laid out back to back after the image */
+    LOAD_ADDR _percpu_start, r20
     mov r10, r21
     mul r12, r21, r22   /* cpu private block offset (r22 gets the discarded high word) */
-    add r21, r20    /* first block + cpu block offset = r20 points to cpu */
+    add r21, r20        /* first block + cpu block offset = r20 points to cpu */
+_cpu_block_found:
     mov r20, r13    /* r13 holds the CPU pointer */
     mov r13, r15
     mov r13, r16
