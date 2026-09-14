@@ -69,7 +69,8 @@ union csa {
     struct upper_context upper;
 };
 
-extern union csa csa_array[PLAT_CPU_NUM][CSA_ENTRIES];
+/* Per-cpu object (see percpu.h): access through percpu_get(csa_pool, cpuid) */
+extern union csa csa_pool[CSA_ENTRIES];
 
 #endif
 

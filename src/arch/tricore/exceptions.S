@@ -250,9 +250,12 @@ vcpu_arch_entry:
     mfcr %d0, $pcxi
     mfcr %d1, $fcx
     mtcr $fcx, %d0
-    load_32bit_val_d %d0, csa_array
-    mov %d2, CSA_ARRAY_SIZE
-    madd %d0, %d0, %d3, %d2
+    /* this cpu's CSA pool: cpu private block (a8) + offset of the template */
+    load_32bit_val_d %d0, csa_pool
+    load_32bit_val_d %d2, _percpu_start
+    sub %d0, %d0, %d2
+    mov.d %d2, %a8
+    add %d0, %d0, %d2
     add %d0, %d0, CSA_SIZE_BYTES
     mov.a %a2, %d0
     st.w [%a2], %d1

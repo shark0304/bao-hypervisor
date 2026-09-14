@@ -4,6 +4,8 @@
  */
 
 #include <platform.h>
+#include <percpu.h>
 #include <arch/csa.h>
 
-union csa csa_array[PLAT_CPU_NUM][CSA_ENTRIES] __attribute__((aligned(64)));
+/* Each cpu's context save areas live in its private block (DSPR when the platform couples it) */
+DEFINE_PERCPU(union csa, csa_pool[CSA_ENTRIES]);

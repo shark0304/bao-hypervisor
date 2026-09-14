@@ -9,6 +9,7 @@
 #include <arch/csfrs.h>
 #include <arch/prot.h>
 #include <arch/csa.h>
+#include <percpu.h>
 #include <fences.h>
 
 cpuid_t CPU_MASTER __attribute__((section(".data")));
@@ -24,7 +25,7 @@ static inline void cpu_reset_csa(void)
 
     /* We use the index 1, since it is the true first element of the array.
     The index 0 is initialized as NULL and kept that way to prevent errors. */
-    union csa* entry = &csa_array[core_id][1];
+    union csa* entry = &(*percpu_get(csa_pool, core_id))[1];
     entry->lower.pcxi = old_fcx;
 }
 
