@@ -155,6 +155,10 @@ SECTIONS
 		_percpu_end = ABSOLUTE(.);
 	}
 	_percpu_size = ABSOLUTE(_percpu_end - _percpu_start);
+#ifdef PLAT_CPU_PRIVATE_MIN_SIZE
+	ASSERT(_percpu_size <= PLAT_CPU_PRIVATE_MIN_SIZE,
+		"cpu private block does not fit in the smallest cpu-affine memory region")
+#endif
 
 #ifdef MEM_PROT_MMU
 	. = BAO_VM_BASE;

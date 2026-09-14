@@ -11,6 +11,7 @@
 
 #include <spinlock.h>
 #include <mem.h>
+#include <platform_defs.h>
 #include <circular_queue.h>
 
 #ifndef __ASSEMBLER__
@@ -93,6 +94,7 @@ void cpu_arch_powerdown(void);
 extern struct cpu cpu_private_block;
 
 extern struct cpuif cpu_interfaces[];
+extern const paddr_t cpu_private_base_tbl[PLAT_CPU_NUM];
 static inline struct cpuif* cpu_if(cpuid_t cpu_id)
 {
     return &cpu_interfaces[cpu_id];

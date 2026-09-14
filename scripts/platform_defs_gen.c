@@ -11,6 +11,15 @@ __attribute__((weak)) void arch_platform_defs(void){
     return;
 }
 
+/**
+ * Whether the architecture's boot code places each cpu's private block through the generated
+ * per-cpu base table (see PLAT_CPU_PRIVATE_BASES). Ports that do override this in their own
+ * platform_defs_gen.c.
+ */
+__attribute__((weak)) bool arch_cpu_private_placement(void){
+    return false;
+}
+
 int main() {
 
     size_t bitmap_array_size = 0;
@@ -36,12 +45,48 @@ int main() {
     {
         size_t reg_size;
 
+        /* Cpu-affine regions are never page pools */
+        if (platform.regions[i].cpu_affinity != 0) {
+            continue;
+        }
+
         reg_size = platform.regions[i].size;
 
         bitmap_array_size += BITMAP_SIZE_IN_BYTES(NUM_PAGES(reg_size));
     }
 
     printf("#define PLAT_BITMAP_POOL_SIZE (0x%lx)\n", bitmap_array_size);
+
+    /*
+     * Cpu private block placement: the first region affine to exactly one cpu hosts that cpu's
+     * private block. Cpus without such a region get 0 and fall back to the image-adjacent layout.
+     */
+    size_t private_min_size = 0;
+    bool private_any = false;
+    printf("#define PLAT_CPU_PRIVATE_BASES {");
+    for (size_t cpu = 0; cpu < platform.cpu_num; cpu++) {
+        paddr_t base = 0;
+        for (size_t i = 0; i < platform.region_num; i++) {
+            if (platform.regions[i].cpu_affinity == (1UL << cpu)) {
+                base = platform.regions[i].base;
+                if (!private_any || platform.regions[i].size < private_min_size) {
+                    private_min_size = platform.regions[i].size;
+                }
+                private_any = true;
+                break;
+            }
+        }
+        printf("%s0x%lx", cpu == 0 ? " " : ", ", base);
+    }
+    printf(" }\n");
+    if (private_any) {
+        if (!arch_cpu_private_placement()) {
+            fprintf(stderr, "cpu-affine memory regions are not supported by this architecture's "
+                "boot code yet\n");
+            return 1;
+        }
+        printf("#define PLAT_CPU_PRIVATE_MIN_SIZE (0x%lx)\n", private_min_size);
+    }
 
     if (platform.cpu_master_fixed) {
         printf("#define CPU_MASTER_FIXED (%ld)\n", platform.cpu_master);

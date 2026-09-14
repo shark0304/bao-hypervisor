@@ -16,6 +16,13 @@
  */
 struct cpu cpu_private_block __attribute__((section(".percpu.cpu"), used));
 
+/**
+ * Where the boot code places each cpu's private block when the platform couples a memory region
+ * to that cpu (see struct mem_region.cpu_affinity); 0 means the image-adjacent fallback layout.
+ * Read by the boot code, hence a plain constant table.
+ */
+const paddr_t cpu_private_base_tbl[PLAT_CPU_NUM] = PLAT_CPU_PRIVATE_BASES;
+
 struct cpu_synctoken cpu_glb_sync = { .ready = false };
 
 extern cpu_msg_handler_t ipi_cpumsg_handlers[];

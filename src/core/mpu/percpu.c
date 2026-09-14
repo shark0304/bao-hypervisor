@@ -7,8 +7,15 @@
 
 vaddr_t percpu_base(cpuid_t cpuid)
 {
-    /* Private blocks are laid out back to back by the boot code, starting at the template */
-    return (vaddr_t)&_percpu_start + (cpuid * PERCPU_SIZE);
+    /**
+     * A cpu with a coupled memory region (TCM, local RAM) has its private block placed there by
+     * the boot code, the others are laid out back to back starting at the template.
+     */
+    paddr_t base = cpu_private_base_tbl[cpuid];
+    if (base == 0U) {
+        base = (vaddr_t)&_percpu_start + (cpuid * PERCPU_SIZE);
+    }
+    return base;
 }
 
 void percpu_init(void)
