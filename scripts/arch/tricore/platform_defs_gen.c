@@ -34,3 +34,8 @@ void arch_platform_defs() {
     }
 
 }
+
+/* The tricore boot code places each cpu's private block through the generated table */
+bool arch_cpu_private_placement(void) {
+    return true;
+}

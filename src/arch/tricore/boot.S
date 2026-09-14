@@ -124,13 +124,19 @@ _reset_handler:
     mov     %d3, 0
     mov.a   %sp, %d3
 
-    /* CPU physical based address */
-    load_32bit_val_d    %d3, _dmem_beg
-
-    /* CPU_X physical base address (private block: struct cpu + per-cpu objects) */
+    /* CPU_X private block (struct cpu + per-cpu objects) size */
     load_32bit_val_d    %d4, _percpu_size
-    madd    %d3, %d3, %d0, %d4
 
+    /* cpu-affine region declared by the platform (0 if none) */
+    load_32bit_val_a    %a4, cpu_private_base_tbl
+    addsc.a %a4, %a4, %d0, 2
+    ld.w    %d3, [%a4]
+    jnz     %d3, 1f
+
+    /* fallback: blocks laid out back to back after the image */
+    load_32bit_val_d    %d3, _dmem_beg
+    madd    %d3, %d3, %d0, %d4
+1:
     mov.a %a8, %d3
 
     /* Clear the CPU struct */
