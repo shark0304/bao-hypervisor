@@ -139,7 +139,24 @@ SECTIONS
 
 	. = BAO_CPU_BASE;
 	_cpu_private_beg = ABSOLUTE(.);
+#endif
 
+	/**
+	 * Per-cpu private block template: struct cpu (always first) followed by every object declared
+	 * with DEFINE_PERCPU. Each cpu owns one instance of the whole block. On MPU targets the
+	 * instances are laid out back to back starting at _image_end (or in a cpu-affine platform
+	 * region), on MMU targets every cpu maps its own instance at BAO_CPU_BASE.
+	 */
+	.percpu (NOLOAD) : ALIGN(PAGE_SIZE) {
+		_percpu_start = ABSOLUTE(.);
+		*(.percpu.cpu)
+		*(.percpu .percpu.*)
+		. = ALIGN(PAGE_SIZE);
+		_percpu_end = ABSOLUTE(.);
+	}
+	_percpu_size = ABSOLUTE(_percpu_end - _percpu_start);
+
+#ifdef MEM_PROT_MMU
 	. = BAO_VM_BASE;
 	_cpu_private_end = ABSOLUTE(.);
 	_vm_beg = ABSOLUTE(.);

@@ -67,6 +67,7 @@ _image_start_sym: DEFINE_WORD _image_start
 _image_load_end_sym: DEFINE_WORD _image_load_end
 _image_noload_start_sym: DEFINE_WORD _image_noload_start
 _image_end_sym: DEFINE_WORD _image_end
+_percpu_size_sym: DEFINE_WORD _percpu_size
 _dmem_beg_sym: DEFINE_WORD _dmem_beg
 _enter_vas_sym: DEFINE_WORD _enter_vas
 _bss_start_sym: DEFINE_WORD _bss_start
@@ -224,17 +225,19 @@ wait_for_bsp:
     blt     t2, t1, 1b
 
 map_cpu:
-    /* Calculate base phys address of CPU struct -> t0 */
+    /* Calculate base phys address of CPU private block -> t0 */
     la      t0, _dmem_phys_beg
-    li      t1, (CPU_SIZE + (PT_SIZE*PT_LVLS))
+    LD_SYM  t1, _percpu_size_sym
+    li      t2, (PT_SIZE*PT_LVLS)
+    add     t1, t1, t2
     mul     t2, t1, a0
     add     t0, t0, t2
     mv      a3, t0
     add     a4, a3, t1
     call    clear
 
-    /* Calculate phys address page table -> t1 */
-    li      t2, CPU_SIZE
+    /* Calculate phys address page table (right after the cpu private block) -> t1 */
+    LD_SYM  t2, _percpu_size_sym
     add     t1, t0, t2
 
     /* Add root l1 page table pointer to root page table */
@@ -266,7 +269,8 @@ map_cpu:
     li          t2, BAO_CPU_BASE
     PTE_PTR     t1, t1, 2, t2
     PTE_FILL    t2, t0, PTE_HYP_FLAGS | PTE_PAGE
-    li          t3, CPU_SIZE+PT_SIZE
+    LD_SYM      t3, _percpu_size_sym
+    add         t3, t3, t4
 1:
     blez    t3, setup_cpu
     STORE   t2, 0(t1)
@@ -277,10 +281,12 @@ map_cpu:
     
 setup_cpu:
     la      t0, _dmem_phys_beg
-    li      t1, (CPU_SIZE + (PT_SIZE*PT_LVLS))
+    LD_SYM  t1, _percpu_size_sym
+    li      t2, (PT_SIZE*PT_LVLS)
+    add     t1, t1, t2
     mul     t1, t1, a0
     add     t0, t0, t1   
-    li      t1, CPU_SIZE
+    LD_SYM  t1, _percpu_size_sym
     add     t0, t0, t1
     srl     t0, t0, PAGE_SHIFT
     li      t2, SATP_MODE_DFLT

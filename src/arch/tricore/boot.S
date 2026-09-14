@@ -127,8 +127,8 @@ _reset_handler:
     /* CPU physical based address */
     load_32bit_val_d    %d3, _dmem_beg
 
-    /* CPU_X physical base address */
-    mov     %d4, CPU_SIZE
+    /* CPU_X physical base address (private block: struct cpu + per-cpu objects) */
+    load_32bit_val_d    %d4, _percpu_size
     madd    %d3, %d3, %d0, %d4
 
     mov.a %a8, %d3

@@ -12,6 +12,7 @@
 #include <printk.h>
 #include <platform.h>
 #include <vmm.h>
+#include <percpu.h>
 
 void init(cpuid_t cpu_id)
 {
@@ -21,6 +22,7 @@ void init(cpuid_t cpu_id)
 
     cpu_init(cpu_id);
     mem_init();
+    percpu_init();
 
     /* -------------------------------------------------------------- */
 

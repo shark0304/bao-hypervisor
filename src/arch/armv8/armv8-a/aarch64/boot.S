@@ -114,9 +114,10 @@ map_cpu:
 	 *    x8 -> aux
 	 */
 
-	/* get cpu root pt */
+	/* get cpu root pt (the cpu private block is followed by its page tables) */
     adrp x3, _dmem_phys_beg
-	mov x8, #(CPU_SIZE + (PT_SIZE*PT_LVLS))
+	ldr x8, =_percpu_size
+	add x8, x8, #(PT_SIZE*PT_LVLS)
 	madd x3, x0, x8, x3
 
 	mov	x16, x3
@@ -124,7 +125,8 @@ map_cpu:
 	bl	boot_clear
 
 	/* Get pointer to root page table */
-	add x4, x3, #CPU_SIZE
+	ldr x8, =_percpu_size
+	add x4, x3, x8
 
 	/* map original bootstrap flat mappings */
 	PTE_INDEX_ASM x5, x1, 0
@@ -158,7 +160,9 @@ map_cpu:
 
 	add x4, x4, #PT_SIZE
 	ldr x7, =BAO_CPU_BASE
-	add x8, x7, #(CPU_SIZE+PT_SIZE)
+	ldr x8, =_percpu_size
+	add x8, x8, x7
+	add x8, x8, #PT_SIZE
 	mov x6, x3
 	add x6, x6, #(PTE_HYP_FLAGS | PTE_TABLE)
 1:
@@ -190,9 +194,11 @@ setup_cpu:
     msr tpidr_el2, x3
 
     adrp x3, _dmem_phys_beg
-	mov x8, #(CPU_SIZE + (PT_SIZE*PT_LVLS))
+	ldr x8, =_percpu_size
+	add x8, x8, #(PT_SIZE*PT_LVLS)
 	madd x3, x0, x8, x3
-	add x3, x3, #CPU_SIZE
+	ldr x8, =_percpu_size
+	add x3, x3, x8
 	msr TTBR0_EL2, x3
 
 	/**
@@ -224,7 +230,8 @@ _enter_vas:
 
 	/* Remove temporary mapping - the L1 page holding it leaks */
 	ldr x4, =BAO_CPU_BASE
-	add x4, x4, #CPU_SIZE
+	ldr x5, =_percpu_size
+	add x4, x4, x5
 	PTE_INDEX_ASM x5, x1, 0
 	str xzr, [x4, x5]
 
@@ -301,7 +308,8 @@ _enter_vas_warm:
 	ldr x4, =BAO_CPU_BASE
 	add x3, x4, #(CPU_STACK_OFF+CPU_STACK_SIZE)
 
-	add x4, x4, #CPU_SIZE
+	ldr x5, =_percpu_size
+	add x4, x4, x5
 	PTE_INDEX_ASM x5, x1, 0
 	str xzr, [x4, x5]
     tlbi	alle2

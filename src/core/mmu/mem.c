@@ -15,6 +15,7 @@
 #include <fences.h>
 #include <tlb.h>
 #include <config.h>
+#include <percpu.h>
 
 #define MEM_SEC_SHARED     (true)
 #define MEM_SEC_NOT_SHARED (false)
@@ -59,7 +60,7 @@ struct {
 
 size_t mem_cpu_boot_alloc_size(void)
 {
-    size_t size = ALIGN(sizeof(struct cpu), PAGE_SIZE);
+    size_t size = PERCPU_SIZE;
     for (size_t i = 0; i < cpu()->as.pt.dscr->lvls; i++) {
         size += ALIGN(pt_size(&cpu()->as.pt, i), PAGE_SIZE);
     }
@@ -777,14 +778,14 @@ void mem_color_hypervisor(const paddr_t load_addr, struct mem_region* root_regio
      *
      * the new CPU region is created, cleaned, prepared and finally mapped.
      */
-    cpu_new = copy_space((void*)BAO_CPU_BASE, sizeof(struct cpu), &p_cpu);
+    cpu_new = copy_space((void*)BAO_CPU_BASE, PERCPU_SIZE, &p_cpu);
     as_init(&cpu_new->as, AS_HYP_CPY, NULL, colors);
     va = mem_alloc_vpage(&cpu_new->as, SEC_HYP_PRIVATE, (vaddr_t)BAO_CPU_BASE,
-        NUM_PAGES(sizeof(struct cpu)));
+        NUM_PAGES(PERCPU_SIZE));
     if (va != (vaddr_t)BAO_CPU_BASE) {
         ERROR("Can't allocate virtual address for cpuspace\n");
     }
-    mem_map(&cpu_new->as, va, &p_cpu, NUM_PAGES(sizeof(struct cpu)), PTE_HYP_FLAGS);
+    mem_map(&cpu_new->as, va, &p_cpu, NUM_PAGES(PERCPU_SIZE), PTE_HYP_FLAGS);
 
     /*
      * Also, map the root page table in the new address space and keep both the virtual address and
@@ -857,7 +858,7 @@ void mem_color_hypervisor(const paddr_t load_addr, struct mem_region* root_regio
      */
 
     cache_flush_range((vaddr_t)&_image_start, image_size);
-    cache_flush_range((vaddr_t)&_cpu_private_beg, sizeof(struct cpu));
+    cache_flush_range((vaddr_t)&_cpu_private_beg, PERCPU_SIZE);
 
     /**
      * Bao's code from here's on still uses the static global variables, so they need to be
@@ -951,7 +952,8 @@ void as_init(struct addr_space* as, enum AS_TYPE type, pte_t* root_pt, colormap_
 
 void mem_prot_init(void)
 {
-    pte_t* root_pt = (pte_t*)ALIGN(((vaddr_t)cpu()) + sizeof(struct cpu), PAGE_SIZE);
+    /* The hypervisor root page table follows the cpu private block */
+    pte_t* root_pt = (pte_t*)(((vaddr_t)cpu()) + PERCPU_SIZE);
     as_init(&cpu()->as, AS_HYP, root_pt, config.hyp.colors);
 }
 

@@ -107,12 +107,12 @@ _reset_handler:
     st.w r20, 0 [r21]
 
 _clear_cpu:
-    /* clear CPUn struct */
-    LOAD_ADDR _image_end, r20
-    mov CPU_SIZE, r12
+    /* clear CPUn private block (struct cpu + per-cpu objects) */
+    LOAD_ADDR _percpu_start, r20
+    LOAD_ADDR _percpu_size, r12
     mov r10, r21
-    mulh r12, r21   /* cpu struct offset */
-    add r21, r20    /* end of .bss + cpu struct offset = r20 points to cpu */
+    mul r12, r21, r22   /* cpu private block offset (r22 gets the discarded high word) */
+    add r21, r20    /* first block + cpu block offset = r20 points to cpu */
     mov r20, r13    /* r13 holds the CPU pointer */
     mov r13, r15
     mov r13, r16

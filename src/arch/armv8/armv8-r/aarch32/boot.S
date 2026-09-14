@@ -18,8 +18,8 @@ boot_arch_profile_init:
     /* CPU physical based address */
     ldr r3, =_dmem_phys_beg 
     
-    /* CPU_X physical base address */
-    mov r7, #CPU_SIZE
+    /* CPU_X physical base address (private block: struct cpu + per-cpu objects) */
+    ldr r7, =_percpu_size
     mla r3, r0, r7, r3
 
     /* Clear the CPU struct */

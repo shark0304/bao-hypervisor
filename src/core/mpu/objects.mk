@@ -6,3 +6,4 @@ core-objs-y+=mpu/vmm.o
 core-objs-y+=mpu/vm.o
 core-objs-y+=mpu/io.o
 core-objs-y+=mpu/config.o
+core-objs-y+=mpu/percpu.o

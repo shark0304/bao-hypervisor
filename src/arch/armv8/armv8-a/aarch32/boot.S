@@ -99,16 +99,20 @@ map_cpu:
      */
 
     get_phys_addr r3, r4, _dmem_phys_beg
-    mov r4, #(CPU_SIZE + (PT_SIZE*PT_LVLS))
+    ldr r4, =_percpu_size
+    add r4, r4, #(PT_SIZE*PT_LVLS)
     mul r4, r0, r4
     add r3, r3, r4
 
     mov r11, r3
-    add r12, r11, #(CPU_SIZE + (PT_SIZE*PT_LVLS))
+    ldr r12, =_percpu_size
+    add r12, r12, #(PT_SIZE*PT_LVLS)
+    add r12, r12, r11
     bl boot_clear
 
-    /* Get pointer to root (l1) page table */
-	add r4, r3, #CPU_SIZE
+    /* Get pointer to root (l1) page table (right after the cpu private block) */
+    ldr r4, =_percpu_size
+	add r4, r3, r4
 
     ldr r5, =(PTE_INDEX(1, BAO_VAS_BASE)*8)
     add r6, r4, #PT_SIZE // get address of l2 page table
@@ -138,7 +142,9 @@ map_cpu:
     mov r7, #(PTE_HYP_FLAGS | PTE_PAGE)
 	add r6, r6, r7
 	ldr r7, =BAO_CPU_BASE
-	add r8, r7, #(CPU_SIZE+PT_SIZE)
+	ldr r8, =_percpu_size
+	add r8, r8, r7
+	add r8, r8, #PT_SIZE
 1:
     cmp r7, r8
     bge setup_cpu
@@ -163,10 +169,12 @@ setup_cpu:
     mcr p15, 4, r3, c13, c0, 2 // write HTPIDR
 
     get_phys_addr r3, r4, _dmem_phys_beg
-    mov r4, #(CPU_SIZE + (PT_SIZE*PT_LVLS))
+    ldr r4, =_percpu_size
+    add r4, r4, #(PT_SIZE*PT_LVLS)
     mul r4, r0, r4
     add r3, r3, r4
-    add r3, r3, #CPU_SIZE
+    ldr r4, =_percpu_size
+    add r3, r3, r4
     mov r4, #0
     mcrr p15, 4, r3, r4, c2 // httbr
 

@@ -89,6 +89,9 @@ void cpu_arch_init(cpuid_t cpu_id, paddr_t load_addr);
 void cpu_arch_standby(void);
 void cpu_arch_powerdown(void);
 
+/* Template instance of the per-cpu private block, see percpu.h */
+extern struct cpu cpu_private_block;
+
 extern struct cpuif cpu_interfaces[];
 static inline struct cpuif* cpu_if(cpuid_t cpu_id)
 {

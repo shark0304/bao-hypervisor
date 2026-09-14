@@ -11,6 +11,7 @@
 #include <platform_defs.h>
 #include <objpool.h>
 #include <config.h>
+#include <percpu.h>
 
 #define MEM_BROADCAST      (true)
 #define MEM_DONT_BROADCAST (false)
@@ -198,7 +199,7 @@ static void mem_init_boot_regions(void)
 
     mpr = (struct mp_region){
         .base = (vaddr_t)cpu(),
-        .size = ALIGN(sizeof(struct cpu), PAGE_SIZE),
+        .size = PERCPU_SIZE,
         .mem_flags = PTE_HYP_FLAGS,
         .as_sec = SEC_HYP_PRIVATE,
     };
@@ -218,8 +219,7 @@ void mem_prot_init()
 
 size_t mem_cpu_boot_alloc_size()
 {
-    size_t size = ALIGN(sizeof(struct cpu), PAGE_SIZE);
-    return size;
+    return PERCPU_SIZE;
 }
 
 void mem_mmio_init_regions(struct addr_space* as)

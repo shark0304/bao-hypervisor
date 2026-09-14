@@ -8,6 +8,13 @@
 #include <platform.h>
 #include <vm.h>
 #include <fences.h>
+#include <percpu.h>
+
+/**
+ * The cpu structure is the first object of the per-cpu private block. This is only the template
+ * instance (see percpu.h): the boot code provides each cpu its own copy, reachable through cpu().
+ */
+struct cpu cpu_private_block __attribute__((section(".percpu.cpu"), used));
 
 struct cpu_synctoken cpu_glb_sync = { .ready = false };
 
